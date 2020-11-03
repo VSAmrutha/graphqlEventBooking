@@ -1,6 +1,7 @@
 const bcrypt=require("bcryptjs")
 const Event=require("../../models/event")
 const User=require("../../models/user")
+const Booking=require("../../models/booking")
 
 const events =  async eventIds => {
     try{
@@ -18,6 +19,17 @@ const events =  async eventIds => {
         throw err;
     }   
   };
+const singleEvent=async eventId=>{
+    try{
+        const event= await Event.findById(eventId)
+        return{
+            ...event._doc,
+            creator:user.bind(this,event.creator)
+        }
+    }catch(err){
+        throw err;
+    }
+}
 //manual population function to connect event to users. 
 //populate("creator ") is build in method to auto populate the connection
 const user=async (userId)=>{
@@ -46,6 +58,22 @@ module.exports={
      }catch(err){     
         throw err;
     }
+    },
+    bookings:async()=>{
+        try{
+          const bookings= await  Booking.find();
+          return bookings.map(booking=>{
+             return{
+                 ...booking._doc,
+                 user:user.bind(this,booking._doc.user),
+                 event:singleEvent.bind(this,booking._doc.event),
+                 createdAt:new Date(booking._doc.createdAt).toISOString(),
+                 updatedAt:new Date(booking._doc.updatedAt).toISOString()
+             } 
+          })
+        }catch(err){
+            throw err;
+        }
     },
     createEvent:async(args,parent)=>{
        
@@ -87,8 +115,31 @@ module.exports={
             });
            const result=await user.save();
             return {...result._doc,password:null}
-    }catch(err){throw err}
-        
-        
+    }catch(err){throw err}    
+    },
+    bookEvent:async args=>{
+        const fetchedEvent=await Event.findOne({_id:args.eventId})
+        const booking=new Booking({
+            user:'5f9810803fbd7c630811b3d9',
+            event:fetchedEvent
+        });
+        const result=await booking.save()
+        return{
+            ...result._doc,
+            user:user.bind(this,result._doc.user),
+            event:singleEvent.bind(this,result._doc.event),
+            createdAt:new Date(result._doc.createdAt).toISOString(),
+            updatedAt:new Date(result._doc.updatedAt).toISOString()
+        }
+    },
+    cancelBooking:async args=>{
+        try{
+            const booking=await Booking.findById(args.bookingId).populate('event');
+            const event={...booking.event._doc,creator:user.bind(this,booking.event._doc.creator)}
+          await Booking.deleteOne({_id:args.bookingId}) 
+          return event; 
+        }catch(err){
+            throw err;
+        }
     }
 }
