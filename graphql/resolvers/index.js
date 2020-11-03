@@ -2,51 +2,52 @@ const bcrypt=require("bcryptjs")
 const Event=require("../../models/event")
 const User=require("../../models/user")
 
-const events =  eventIds => {
-    return Event.find({_id:{$in:eventIds}})
-    .then(events=>{
-        return events.map(event=>{
-         return {
-             ...event._doc,
-             _id:event.id,
-             date:new Date(event._doc.date).toISOString(),
-            creator:user.bind(this,event.creator)}
-        })
-    }).catch(err=>{
+const events =  async eventIds => {
+    try{
+        const events= await Event.find({_id:{$in:eventIds}});
+            return events.map(event=>{
+             return {
+                 ...event._doc,
+                 _id:event.id,
+                 date:new Date(event._doc.date).toISOString(),
+                creator:user.bind(this,event.creator)
+            }
+            })
+    }
+    catch(err){
         throw err;
-    })
-   
+    }   
   };
 //manual population function to connect event to users. 
 //populate("creator ") is build in method to auto populate the connection
-const user=(userId)=>{
-    return User.findById(userId)
-    .then(user=>{
-        console.log("inside userfunction",events.bind(user,user._doc.createdEvents))
+const user=async (userId)=>{
+    try{
+    const user=await User.findById(userId)
+   
       return {
           ...user._doc,
           _id:user.id,
           createdEvents:events.bind(this,user._doc.createdEvents)}  
-    })
-    .catch(err=>{throw err})
+
+      }catch(err){throw err}
 }
 module.exports={
-    events:()=>{
+    events:async()=>{
     //  return events works fine with out extracting from the _doc and toString method
-   return Event.find().then(events=>{
+  try{
+    const events=await  Event.find()
        return events.map(event=>{ 
-           console.log("user",user.bind(event,event._doc.creator))         
         return {
              ...event._doc,
              _id:event.id,
              date:new Date(event._doc.date).toISOString(),
              creator:user.bind(this,event._doc.creator)}
-    })  }).catch(err=>{
-        console.log(err)
+        })
+     }catch(err){     
         throw err;
-    })
+    }
     },
-    createEvent:(args,parent)=>{
+    createEvent:async(args,parent)=>{
        
         const event=new Event({
             title:args.eventInput.title,
@@ -56,47 +57,37 @@ module.exports={
             creator:"5f9810803fbd7c630811b3d9"
         })
        let createdEvent;
-        return event.save()
-        .then(result=>{
+       try{
+        const result= await event.save()
+       
             createdEvent={...result._doc,creator:user.bind(this,result._doc.creator)}
-            return User.findById("5f9810803fbd7c630811b3d9")
-            // console.log(result);
-            // return {...result._doc}
-        })
-        .then(user=>{
-            if(!user){
+            const creatorUser= await User.findById("5f9810803fbd7c630811b3d9")       
+            if(!creatorUser){
                 throw new Error("User Does not exists")
             }
-            user.createdEvents.push(event)
-            return user.save()
-        })
-        .then(result=>{
-            return createdEvent
-        })
-        .catch(err=>{
-            console.log(err)
+            creatorUser.createdEvents.push(event)
+           await creatorUser.save()       
+            return createdEvent    
+        }catch(err){
+           
             throw err;
-        });
+        }
         
     },
-    createUser:(args)=>{
-        return User.findOne({email:args.userInput.email})
-        .then(user=>{
-            if(user){
+    createUser:async (args)=>{
+        try{
+        const existingUser=await User.findOne({email:args.userInput.email})
+            if(existingUser){
                 throw new Error("User exists")
             }
-            return bcrypt.hash(args.userInput.password,12)
-        }).then(hashedPassword=>{
+            const hashedPassword=await bcrypt.hash(args.userInput.password,12)
             const user=new User({
                 email:args.userInput.email,
                 password:hashedPassword
             });
-           return user.save();
-            
-        }).then(result=>{
+           const result=await user.save();
             return {...result._doc,password:null}
-        })
-        .catch(err=>{throw err})
+    }catch(err){throw err}
         
         
     }
