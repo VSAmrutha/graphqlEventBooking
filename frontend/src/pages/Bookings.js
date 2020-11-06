@@ -2,10 +2,13 @@ import React,{useState,useEffect,useContext} from 'react'
 import AuthContext from "../context/auth-context" 
 import Spinner from "../components/Spinner/Spinner"
 import BookingList from "../components/Bookings/BookingList/BookingList"
+import BookingChart from "../components/Bookings/BookingChart/BookingChart"
+import BookingControls from "../components/Bookings/BookingControls/BookingControls"
 
 function Bookings() {
     const [loading,setLoading]=useState(false)
     const [bookings,setBookings]=useState(null)
+    const [outputType,setOutputType]=useState("list")
      const value=useContext(AuthContext)
     useEffect(()=>{
         fetchBookings()
@@ -22,6 +25,7 @@ function Bookings() {
                             _id
                             title
                             date
+                            price
                         }
                     }
                 }
@@ -54,14 +58,17 @@ function Bookings() {
         setLoading(true)
         const requestBody={
             query:`
-                mutation{
-                    cancelBooking(bookingId:"${bookingId}"){
+                mutation CancelBooking($id:ID!){
+                    cancelBooking(bookingId:$id){
                         _id
                         title
                         
                     }
                 }
-            `
+            `,
+            variables:{
+                id:bookingId
+            }
         }
     fetch("http://localhost:8000/graphql",{
         method:'POST',
@@ -87,9 +94,28 @@ function Bookings() {
         setLoading(false)
     })
     }
+    const changeOutHandler=(outputType)=>{
+        if(outputType==="list"){
+            setOutputType("list")
+        }else{
+            setOutputType("chart")
+        }
+    }
+    let content= <Spinner/>
+    if(!loading){
+        content=(
+            <>
+               <BookingControls activeOutputType={outputType} changeOutHandler={changeOutHandler}/>
+                <div>
+                    {outputType==="list"?<BookingList onCancelBook={onCancelBook} bookings={bookings}/>:
+                    <BookingChart bookings={bookings}/>}
+                </div>
+            </>
+        )
+    }
     return (
         <>
-      {loading ?<Spinner/>: <BookingList onCancelBook={onCancelBook} bookings={bookings}/>}
+      {content}
        </>
     )
 }

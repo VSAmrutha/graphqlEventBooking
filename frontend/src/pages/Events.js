@@ -89,8 +89,8 @@ function Events() {
         
             const requestBody={
                 query:`
-                    mutation{
-                        createEvent(eventInput:{title:"${title}",description:"${description}",price:${price},date:"${date}"}){
+                    mutation CreateEvent($title:String!,$description:String!,$price:Float!,$date:String!){
+                        createEvent(eventInput:{title:$title,description:$description,price:$price,date:$date}){
                             _id
                             title
                             description
@@ -98,7 +98,13 @@ function Events() {
                             date
                         }
                     }
-                `
+                `,
+               variables: {
+                    title:title,
+                    description:description,
+                    price:price,
+                    date:date
+                }
             }
         
         const token=value.token;
@@ -145,14 +151,17 @@ function Events() {
          setLoading(true)
         const requestBody={
             query:`
-                mutation{
-                    bookEvent(eventId:"${selectedEvent._id}"){
+                mutation BookEvent($eventid:ID!){
+                    bookEvent(eventId:$eventid){
                         _id
                        createdAt
                        updatedAt
                     }
                 }
-            `
+            `,
+               variables: {
+                    eventid:selectedEvent._id  
+                }
         }
     fetch("http://localhost:8000/graphql",{
         method:'POST',
